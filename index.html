@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TO DOODOO — Task Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --surface: #ffffff;
+    --surface-hover: #faf8f5;
+    --border: #e4dfd7;
+    --text: #2c2825;
+    --text-muted: #8a8279;
+    --text-dim: #b5aea5;
+    --accent: #c47d2e;
+    --accent-glow: rgba(196, 125, 46, 0.15);
+    --green: #16a34a;
+    --green-bg: rgba(22, 163, 74, 0.07);
+    --green-border: rgba(22, 163, 74, 0.3);
+    --yellow: #ca8a04;
+    --yellow-bg: rgba(202, 138, 4, 0.07);
+    --yellow-border: rgba(202, 138, 4, 0.3);
+    --red: #dc2626;
+    --red-bg: rgba(220, 38, 38, 0.06);
+    --red-border: rgba(220, 38, 38, 0.25);
+    --done-bg: #f0ede8;
+    --done-text: #c0b9ae;
+    --radius: 10px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 0 20px 80px;
+  }
+
+  header {
+    padding: 48px 0 12px;
+    text-align: center;
+    position: relative;
+  }
+
+  header::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 3px;
+    background: var(--accent);
+    margin: 20px auto 0;
+    border-radius: 2px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: 2.6rem;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--text), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  h1 span {
+    font-size: 0.4em;
+    display: block;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    -webkit-text-fill-color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 32px 0 18px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .section-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .section-label .count {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--surface);
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+
+  .btn {
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: all 0.2s;
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px var(--accent-glow);
+  }
+
+  /* Task Table */
+  .task-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 6px;
+  }
+
+  .task-table thead th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 2;
+  }
+
+  .task-table thead th:first-child { width: 44px; text-align: center; }
+
+  .task-table tbody tr {
+    background: var(--surface);
+    transition: all 0.25s ease;
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+  }
+
+  .task-table tbody tr:hover {
+    background: var(--surface-hover);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+
+  .task-table tbody td {
+    padding: 12px 14px;
+    font-size: 0.88rem;
+    vertical-align: middle;
+    border-top: 1px solid transparent;
+    border-bottom: 1px solid transparent;
+  }
+
+  .task-table tbody td:first-child {
+    border-radius: var(--radius) 0 0 var(--radius);
+    border-left: 1px solid transparent;
+    text-align: center;
+    width: 44px;
+  }
+
+  .task-table tbody td:last-child {
+    border-radius: 0 var(--radius) var(--radius) 0;
+    border-right: 1px solid transparent;
+  }
+
+  /* Deadline color rows */
+  tr.urgency-green { border-left: 3px solid var(--green); }
+  tr.urgency-green td:first-child { border-left: 3px solid var(--green); }
+  tr.urgency-yellow td:first-child { border-left: 3px solid var(--yellow); }
+  tr.urgency-red td:first-child { border-left: 3px solid var(--red); }
+
+  tr.urgency-green td .deadline-pill { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  tr.urgency-yellow td .deadline-pill { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+  tr.urgency-red td .deadline-pill { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+
+  .deadline-pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    background: var(--surface);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  /* Done rows */
+  tr.task-done {
+    opacity: 0.45;
+  }
+
+  tr.task-done td {
+    text-decoration: line-through;
+    color: var(--done-text) !important;
+  }
+
+  tr.task-done td .deadline-pill {
+    background: transparent !important;
+    border-color: var(--border) !important;
+    color: var(--done-text) !important;
+  }
+
+  /* Custom checkbox */
+  .check-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .check-wrap input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    background: transparent;
+  }
+
+  .check-wrap input[type="checkbox"]:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .check-wrap input[type="checkbox"]:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .check-wrap input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  /* Editable cells */
+  .editable {
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    width: 100%;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: all 0.15s;
+    outline: none;
+  }
+
+  .editable:hover { background: rgba(0,0,0,0.03); }
+  .editable:focus { background: rgba(0,0,0,0.02); box-shadow: 0 0 0 2px var(--accent-glow); }
+
+  input.editable[type="date"] {
+    color-scheme: light;
+    cursor: pointer;
+  }
+
+  textarea.editable {
+    resize: vertical;
+    min-height: 36px;
+    line-height: 1.4;
+  }
+
+  /* Link styling */
+  .dsr-link {
+    color: var(--accent);
+    font-size: 0.75rem;
+    opacity: 0.7;
+    text-decoration: none;
+    word-break: break-all;
+    transition: opacity 0.15s;
+  }
+  .dsr-link:hover { opacity: 1; text-decoration: underline; }
+
+  .editable.link-input {
+    font-size: 0.75rem;
+    color: var(--accent);
+    opacity: 0.8;
+  }
+
+  /* Finished section */
+  .finished-section {
+    margin-top: 48px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+  }
+
+  .finished-section .section-label {
+    color: var(--text-muted);
+  }
+
+  /* Delete btn */
+  .del-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: all 0.15s;
+    opacity: 0;
+  }
+
+  tr:hover .del-btn { opacity: 1; }
+  .del-btn:hover { color: var(--red); background: var(--red-bg); }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+  }
+
+  .empty-state .icon { font-size: 2rem; margin-bottom: 8px; }
+
+  /* Responsive */
+  @media (max-width: 800px) {
+    h1 { font-size: 1.8rem; }
+    .task-table { font-size: 0.82rem; }
+    .task-table thead th, .task-table tbody td { padding: 10px 8px; }
+    .toolbar { flex-direction: column; align-items: flex-start; }
+  }
+
+  /* Fade-in animation */
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .task-table tbody tr {
+    animation: fadeSlideIn 0.3s ease forwards;
+  }
+
+  /* Save indicator */
+  .save-indicator {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .save-indicator.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>TO DOODOO<span>Task Tracker</span></h1>
+</header>
+
+<div class="container">
+  <!-- Active Tasks -->
+  <div class="toolbar">
+    <div class="section-label">Active Tasks <span class="count" id="active-count">0</span></div>
+    <button class="btn" onclick="addTask()">＋ New Task</button>
+  </div>
+
+  <table class="task-table" id="active-table">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Seller Name</th>
+        <th>Task</th>
+        <th>Deadline</th>
+        <th>DSR / DSA</th>
+        <th>Notes</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="active-body"></tbody>
+  </table>
+  <div class="empty-state" id="active-empty" style="display:none;">
+    <div class="icon">🎉</div>
+    All tasks finished — nice work.
+  </div>
+
+  <!-- Finished Tasks -->
+  <div class="finished-section">
+    <div class="toolbar">
+      <div class="section-label">Finished <span class="count" id="done-count">0</span></div>
+    </div>
+
+    <table class="task-table" id="done-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Seller Name</th>
+          <th>Task</th>
+          <th>Deadline</th>
+          <th>DSR / DSA</th>
+          <th>Notes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="done-body"></tbody>
+    </table>
+    <div class="empty-state" id="done-empty">
+      <div class="icon">📋</div>
+      No finished tasks yet.
+    </div>
+  </div>
+</div>
+
+<div class="save-indicator" id="save-indicator">✓ Saved to browser</div>
+
+<script>
+  // ---- Data ----
+  const DEFAULT_TASKS = [
+    { id: _id(), seller: "Wasuta Pasta", task: "Follow up with Seller to book a KOC", deadline: "2026-04-10", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004b5BJIAY/view", notes: "Follow up made! Waiting for KOC booking", done: false },
+    { id: _id(), seller: "eats of eden", task: "Follow up with Seller to book a KOC", deadline: "2026-04-09", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004cu3hIAA/view", notes: "Follow up made! Waiting for KOC booking", done: false },
+    { id: _id(), seller: "Cafe Guido and Co", task: "Conduct Final Q&A", deadline: "", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004PPH3IAO/view", notes: "Reached out to Seller and offered chilipiper link to conduct Final Q&A", done: false },
+    { id: _id(), seller: "UUDUU Multiverse", task: "Conduct Final Q&A", deadline: "2026-04-20", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000003vzufIAA/view", notes: "Reach out to partner tech to schedule final Q&A and be present for this. Collect all video links from rev", done: false },
+    { id: _id(), seller: "Verona Cafe Lebonese", task: "Follow up with Seller to book a KOC", deadline: "2026-04-13", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004Y0mTIAS/view", notes: "Intro by AE was made but Seller did not reply. Follow up tomorrow", done: false },
+    { id: _id(), seller: "Gino's Paninos", task: "Create training script for how to create items, modifiers, variations, and how to associate them", deadline: "2026-04-10", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004Zm5tIAC/view", notes: "", done: false },
+    { id: _id(), seller: "New Burbs", task: "Create Menu", deadline: "2026-04-17", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Activity__c/a2xV400002gNQTIA2/view", notes: "Waiting on possible toast file export to expedite building process. Wait until 3pmPT", done: false },
+    { id: _id(), seller: "New Burbs", task: "Conduct training", deadline: "2026-04-20", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004a9ldIAA/view", notes: "Need help troubleshooting when connectivity is unreliable and admin dashboards", done: false },
+    { id: _id(), seller: "Cafe Guido and Co", task: "Schedule Final Q&A", deadline: "2026-04-13", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004PPH3IAO/view", notes: "Vlad made intro. Inquire about dates they might be open. Collect all video links from rev", done: true },
+    { id: _id(), seller: "Verona Cafe Lebonese", task: "Follow up with AE about introduction", deadline: "2026-04-10", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004Y0mTIAS/view", notes: "Follow up with AE about introduction", done: true },
+    { id: _id(), seller: "Gino's Paninos", task: "Create menu", deadline: "2026-04-09", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004Zm5tIAC/view", notes: "Menu is done for the most part but missing images and modifiers but we can use that as training opp", done: true },
+  ];
+
+  function _id() { return Math.random().toString(36).substr(2, 9); }
+
+  function loadTasks() {
+    const stored = localStorage.getItem('doodoo_tasks');
+    if (stored) {
+      try { return JSON.parse(stored); } catch(e) {}
+    }
+    return DEFAULT_TASKS;
+  }
+
+  function saveTasks() {
+    localStorage.setItem('doodoo_tasks', JSON.stringify(tasks));
+    flashSave();
+  }
+
+  let tasks = loadTasks();
+
+  // ---- Urgency Calculation ----
+  // "more than 50% away" = more than 50% of total time remains → green
+  // "below 50%" remaining → yellow
+  // "below 25%" remaining → red
+  // We measure from task creation (or a fixed reference: 7 days before deadline) to deadline
+  function getUrgency(deadlineStr) {
+    if (!deadlineStr) return '';
+    const now = new Date();
+    const deadline = new Date(deadlineStr + 'T23:59:59');
+    const totalSpan = 14 * 24 * 60 * 60 * 1000; // assume 14-day planning window
+    const remaining = deadline - now;
+
+    if (remaining < 0) return 'red';
+
+    const pctRemaining = remaining / totalSpan;
+
+    if (pctRemaining > 0.50) return 'green';
+    if (pctRemaining > 0.25) return 'yellow';
+    return 'red';
+  }
+
+  // ---- Rendering ----
+  function render() {
+    const activeBody = document.getElementById('active-body');
+    const doneBody = document.getElementById('done-body');
+    activeBody.innerHTML = '';
+    doneBody.innerHTML = '';
+
+    const active = tasks.filter(t => !t.done);
+    const done = tasks.filter(t => t.done);
+
+    active.forEach(t => activeBody.appendChild(buildRow(t)));
+    done.forEach(t => doneBody.appendChild(buildRow(t)));
+
+    document.getElementById('active-count').textContent = active.length;
+    document.getElementById('done-count').textContent = done.length;
+    document.getElementById('active-empty').style.display = active.length === 0 ? '' : 'none';
+    document.getElementById('active-table').style.display = active.length === 0 ? 'none' : '';
+    document.getElementById('done-empty').style.display = done.length === 0 ? '' : 'none';
+    document.getElementById('done-table').style.display = done.length === 0 ? 'none' : '';
+  }
+
+  function buildRow(t) {
+    const tr = document.createElement('tr');
+    const urgency = t.done ? '' : getUrgency(t.deadline);
+    if (urgency) tr.classList.add('urgency-' + urgency);
+    if (t.done) tr.classList.add('task-done');
+
+    // Checkbox
+    const tdCheck = document.createElement('td');
+    const wrap = document.createElement('label');
+    wrap.className = 'check-wrap';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = t.done;
+    cb.addEventListener('change', () => {
+      t.done = cb.checked;
+      saveTasks();
+      render();
+    });
+    wrap.appendChild(cb);
+    tdCheck.appendChild(wrap);
+    tr.appendChild(tdCheck);
+
+    // Seller
+    tr.appendChild(makeEditableCell(t, 'seller', 'input'));
+
+    // Task
+    tr.appendChild(makeEditableCell(t, 'task', 'textarea'));
+
+    // Deadline
+    const tdDeadline = document.createElement('td');
+    const dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.className = 'editable';
+    dateInput.value = t.deadline || '';
+    dateInput.addEventListener('change', () => {
+      t.deadline = dateInput.value;
+      saveTasks();
+      render();
+    });
+    // Wrap in pill for display
+    const pillWrap = document.createElement('div');
+    if (t.deadline) {
+      const pill = document.createElement('span');
+      pill.className = 'deadline-pill';
+      pill.textContent = formatDate(t.deadline);
+      pill.style.cursor = 'pointer';
+      pill.addEventListener('click', () => {
+        pill.style.display = 'none';
+        dateInput.style.display = '';
+        dateInput.focus();
+      });
+      dateInput.style.display = 'none';
+      dateInput.addEventListener('blur', () => {
+        pill.textContent = formatDate(t.deadline);
+        pill.style.display = '';
+        dateInput.style.display = 'none';
+      });
+      pillWrap.appendChild(pill);
+    }
+    pillWrap.appendChild(dateInput);
+    tdDeadline.appendChild(pillWrap);
+    tr.appendChild(tdDeadline);
+
+    // DSR/DSA
+    const tdDsr = document.createElement('td');
+    if (t.dsr) {
+      const a = document.createElement('a');
+      a.href = t.dsr;
+      a.target = '_blank';
+      a.className = 'dsr-link';
+      a.textContent = 'Open DSR ↗';
+      a.title = t.dsr;
+      tdDsr.appendChild(a);
+      tdDsr.appendChild(document.createElement('br'));
+    }
+    const dsrInput = document.createElement('input');
+    dsrInput.type = 'text';
+    dsrInput.className = 'editable link-input';
+    dsrInput.value = t.dsr || '';
+    dsrInput.placeholder = 'Paste DSR link…';
+    dsrInput.addEventListener('input', () => {
+      t.dsr = dsrInput.value;
+      saveTasks();
+    });
+    dsrInput.addEventListener('change', () => render());
+    tdDsr.appendChild(dsrInput);
+    tr.appendChild(tdDsr);
+
+    // Notes
+    tr.appendChild(makeEditableCell(t, 'notes', 'textarea'));
+
+    // Delete
+    const tdDel = document.createElement('td');
+    const delBtn = document.createElement('button');
+    delBtn.className = 'del-btn';
+    delBtn.innerHTML = '✕';
+    delBtn.title = 'Delete task';
+    delBtn.addEventListener('click', () => {
+      if (confirm('Delete this task?')) {
+        tasks = tasks.filter(x => x.id !== t.id);
+        saveTasks();
+        render();
+      }
+    });
+    tdDel.appendChild(delBtn);
+    tr.appendChild(tdDel);
+
+    return tr;
+  }
+
+  function makeEditableCell(task, field, type) {
+    const td = document.createElement('td');
+    let el;
+    if (type === 'textarea') {
+      el = document.createElement('textarea');
+      el.rows = 1;
+      el.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+      });
+    } else {
+      el = document.createElement('input');
+      el.type = 'text';
+    }
+    el.className = 'editable';
+    el.value = task[field] || '';
+    el.placeholder = field.charAt(0).toUpperCase() + field.slice(1) + '…';
+    el.addEventListener('input', () => {
+      task[field] = el.value;
+      saveTasks();
+    });
+    td.appendChild(el);
+    return td;
+  }
+
+  function formatDate(str) {
+    if (!str) return 'TBD';
+    const d = new Date(str + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function addTask() {
+    tasks.unshift({
+      id: _id(),
+      seller: '',
+      task: '',
+      deadline: '',
+      dsr: '',
+      notes: '',
+      done: false
+    });
+    saveTasks();
+    render();
+    // Focus the first seller input
+    const firstInput = document.querySelector('#active-body tr:first-child td:nth-child(2) input, #active-body tr:first-child td:nth-child(2) textarea');
+    if (firstInput) firstInput.focus();
+  }
+
+  let saveTimer;
+  function flashSave() {
+    const el = document.getElementById('save-indicator');
+    el.classList.add('show');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => el.classList.remove('show'), 1500);
+  }
+
+  // Auto-resize textareas on load
+  function autoResizeAll() {
+    document.querySelectorAll('textarea.editable').forEach(ta => {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    });
+  }
+
+  render();
+  requestAnimationFrame(autoResizeAll);
+</script>
+
+</body>
+</html>
