@@ -319,6 +319,33 @@
     color: var(--text-muted);
   }
 
+  /* Drag handle */
+  .drag-handle {
+    cursor: grab;
+    color: var(--text-dim);
+    font-size: 1.1rem;
+    padding: 4px 2px;
+    user-select: none;
+    transition: color 0.15s;
+    letter-spacing: 2px;
+  }
+
+  .drag-handle:hover { color: var(--text-muted); }
+  .drag-handle:active { cursor: grabbing; }
+
+  tr.dragging {
+    opacity: 0.4;
+    background: var(--accent-glow) !important;
+  }
+
+  tr.drag-over-above {
+    box-shadow: 0 -3px 0 0 var(--accent) inset;
+  }
+
+  tr.drag-over-below {
+    box-shadow: 0 3px 0 0 var(--accent) inset;
+  }
+
   /* Delete btn */
   .del-btn {
     background: none;
@@ -403,6 +430,7 @@
   <table class="task-table" id="active-table">
     <thead>
       <tr>
+        <th style="width:32px"></th>
         <th></th>
         <th>Seller Name</th>
         <th>Task</th>
@@ -428,6 +456,7 @@
     <table class="task-table" id="done-table">
       <thead>
         <tr>
+          <th style="width:32px"></th>
           <th></th>
           <th>Seller Name</th>
           <th>Task</th>
@@ -525,9 +554,63 @@
 
   function buildRow(t) {
     const tr = document.createElement('tr');
+    tr.dataset.id = t.id;
+    tr.draggable = true;
     const urgency = t.done ? '' : getUrgency(t.deadline);
     if (urgency) tr.classList.add('urgency-' + urgency);
     if (t.done) tr.classList.add('task-done');
+
+    // Drag handle
+    const tdDrag = document.createElement('td');
+    tdDrag.style.width = '32px';
+    tdDrag.style.textAlign = 'center';
+    tdDrag.style.padding = '0 4px';
+    const handle = document.createElement('span');
+    handle.className = 'drag-handle';
+    handle.textContent = '⠿';
+    handle.title = 'Drag to reorder';
+    tdDrag.appendChild(handle);
+    tr.appendChild(tdDrag);
+
+    // Drag events
+    tr.addEventListener('dragstart', (e) => {
+      draggedId = t.id;
+      tr.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      // need a timeout so the class applies visually
+      setTimeout(() => tr.style.opacity = '0.4', 0);
+    });
+    tr.addEventListener('dragend', () => {
+      tr.classList.remove('dragging');
+      tr.style.opacity = '';
+      draggedId = null;
+      clearAllDragOver();
+    });
+    tr.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (draggedId === t.id) return;
+      clearAllDragOver();
+      const rect = tr.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      if (e.clientY < midY) {
+        tr.classList.add('drag-over-above');
+      } else {
+        tr.classList.add('drag-over-below');
+      }
+    });
+    tr.addEventListener('dragleave', () => {
+      tr.classList.remove('drag-over-above', 'drag-over-below');
+    });
+    tr.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (!draggedId || draggedId === t.id) return;
+      const rect = tr.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      const insertBefore = e.clientY < midY;
+      reorderTask(draggedId, t.id, insertBefore);
+      clearAllDragOver();
+    });
 
     // Checkbox
     const tdCheck = document.createElement('td');
@@ -695,6 +778,30 @@
       ta.style.height = 'auto';
       ta.style.height = ta.scrollHeight + 'px';
     });
+  }
+
+  // ---- Drag and Drop ----
+  let draggedId = null;
+
+  function clearAllDragOver() {
+    document.querySelectorAll('.drag-over-above, .drag-over-below').forEach(el => {
+      el.classList.remove('drag-over-above', 'drag-over-below');
+    });
+  }
+
+  function reorderTask(fromId, toId, insertBefore) {
+    const fromIdx = tasks.findIndex(t => t.id === fromId);
+    if (fromIdx === -1) return;
+    const [moved] = tasks.splice(fromIdx, 1);
+
+    let toIdx = tasks.findIndex(t => t.id === toId);
+    if (toIdx === -1) return;
+    if (!insertBefore) toIdx += 1;
+
+    tasks.splice(toIdx, 0, moved);
+    saveTasks();
+    render();
+    requestAnimationFrame(autoResizeAll);
   }
 
   render();
