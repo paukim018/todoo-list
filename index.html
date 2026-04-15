@@ -346,6 +346,23 @@
     box-shadow: 0 3px 0 0 var(--accent) inset;
   }
 
+  /* Clone btn */
+  .clone-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.95rem;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: all 0.15s;
+    opacity: 0;
+    margin-right: 2px;
+  }
+
+  tr:hover .clone-btn { opacity: 1; }
+  .clone-btn:hover { color: var(--accent); background: var(--accent-glow); }
+
   /* Delete btn */
   .del-btn {
     background: none;
@@ -697,8 +714,32 @@
     // Notes
     tr.appendChild(makeEditableCell(t, 'notes', 'textarea'));
 
-    // Delete
-    const tdDel = document.createElement('td');
+    // Actions (clone + delete)
+    const tdActions = document.createElement('td');
+    tdActions.style.whiteSpace = 'nowrap';
+
+    const cloneBtn = document.createElement('button');
+    cloneBtn.className = 'clone-btn';
+    cloneBtn.innerHTML = '⧉';
+    cloneBtn.title = 'Clone task';
+    cloneBtn.addEventListener('click', () => {
+      const idx = tasks.findIndex(x => x.id === t.id);
+      const clone = {
+        id: _id(),
+        seller: t.seller,
+        task: t.task,
+        deadline: t.deadline,
+        dsr: t.dsr,
+        notes: t.notes,
+        done: false
+      };
+      tasks.splice(idx + 1, 0, clone);
+      saveTasks();
+      render();
+      requestAnimationFrame(autoResizeAll);
+    });
+    tdActions.appendChild(cloneBtn);
+
     const delBtn = document.createElement('button');
     delBtn.className = 'del-btn';
     delBtn.innerHTML = '✕';
@@ -710,8 +751,8 @@
         render();
       }
     });
-    tdDel.appendChild(delBtn);
-    tr.appendChild(tdDel);
+    tdActions.appendChild(delBtn);
+    tr.appendChild(tdActions);
 
     return tr;
   }
