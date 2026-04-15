@@ -496,18 +496,19 @@
 
 <script>
   // ---- Data ----
+  // Sample deadlines are generated relative to today so the color coding always works
+  const _today = new Date();
+  const _dayMs = 24 * 60 * 60 * 1000;
+  function _futureDate(days) {
+    const d = new Date(_today.getTime() + days * _dayMs);
+    return d.toISOString().split('T')[0];
+  }
+
   const DEFAULT_TASKS = [
-    { id: _id(), seller: "Wasuta Pasta", task: "Follow up with Seller to book a KOC", deadline: "2026-04-10", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004b5BJIAY/view", notes: "Follow up made! Waiting for KOC booking", done: false },
-    { id: _id(), seller: "eats of eden", task: "Follow up with Seller to book a KOC", deadline: "2026-04-09", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004cu3hIAA/view", notes: "Follow up made! Waiting for KOC booking", done: false },
-    { id: _id(), seller: "Cafe Guido and Co", task: "Conduct Final Q&A", deadline: "", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004PPH3IAO/view", notes: "Reached out to Seller and offered chilipiper link to conduct Final Q&A", done: false },
-    { id: _id(), seller: "UUDUU Multiverse", task: "Conduct Final Q&A", deadline: "2026-04-20", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000003vzufIAA/view", notes: "Reach out to partner tech to schedule final Q&A and be present for this. Collect all video links from rev", done: false },
-    { id: _id(), seller: "Verona Cafe Lebonese", task: "Follow up with Seller to book a KOC", deadline: "2026-04-13", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004Y0mTIAS/view", notes: "Intro by AE was made but Seller did not reply. Follow up tomorrow", done: false },
-    { id: _id(), seller: "Gino's Paninos", task: "Create training script for how to create items, modifiers, variations, and how to associate them", deadline: "2026-04-10", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004Zm5tIAC/view", notes: "", done: false },
-    { id: _id(), seller: "New Burbs", task: "Create Menu", deadline: "2026-04-17", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Activity__c/a2xV400002gNQTIA2/view", notes: "Waiting on possible toast file export to expedite building process. Wait until 3pmPT", done: false },
-    { id: _id(), seller: "New Burbs", task: "Conduct training", deadline: "2026-04-20", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004a9ldIAA/view", notes: "Need help troubleshooting when connectivity is unreliable and admin dashboards", done: false },
-    { id: _id(), seller: "Cafe Guido and Co", task: "Schedule Final Q&A", deadline: "2026-04-13", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004PPH3IAO/view", notes: "Vlad made intro. Inquire about dates they might be open. Collect all video links from rev", done: true },
-    { id: _id(), seller: "Verona Cafe Lebonese", task: "Follow up with AE about introduction", deadline: "2026-04-10", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004Y0mTIAS/view", notes: "Follow up with AE about introduction", done: true },
-    { id: _id(), seller: "Gino's Paninos", task: "Create menu", deadline: "2026-04-09", dsr: "https://squareinc.lightning.force.com/lightning/r/Deal_Support_Request__c/a2yV4000004Zm5tIAC/view", notes: "Menu is done for the most part but missing images and modifiers but we can use that as training opp", done: true },
+    { id: _id(), seller: "Sunrise Bakery", task: "Schedule onboarding call", deadline: _futureDate(1), dsr: "https://example.com/dsr/001", notes: "Urgent — deadline is tomorrow!", done: false },
+    { id: _id(), seller: "Mountain Brew Coffee", task: "Build product catalog", deadline: _futureDate(5), dsr: "https://example.com/dsr/002", notes: "Waiting on menu photos from seller", done: false },
+    { id: _id(), seller: "Green Valley Farms", task: "Conduct final training session", deadline: _futureDate(10), dsr: "https://example.com/dsr/003", notes: "Plenty of time — seller confirmed availability", done: false },
+    { id: _id(), seller: "Coastal Eats", task: "Create menu and upload images", deadline: _futureDate(-3), dsr: "https://example.com/dsr/004", notes: "Completed ahead of schedule", done: true },
   ];
 
   function _id() { return Math.random().toString(36).substr(2, 9); }
