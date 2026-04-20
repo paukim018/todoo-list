@@ -285,6 +285,13 @@
     cursor: pointer;
   }
 
+  input.editable[type="time"] {
+    color-scheme: light;
+    cursor: pointer;
+    width: auto;
+    min-width: 90px;
+  }
+
   textarea.editable {
     resize: vertical;
     min-height: 36px;
@@ -452,6 +459,7 @@
         <th>Seller Name</th>
         <th>Task</th>
         <th>Deadline</th>
+        <th>Time</th>
         <th>DSR / DSA</th>
         <th>Notes</th>
         <th></th>
@@ -478,6 +486,7 @@
           <th>Seller Name</th>
           <th>Task</th>
           <th>Deadline</th>
+          <th>Time</th>
           <th>DSR / DSA</th>
           <th>Notes</th>
           <th></th>
@@ -505,10 +514,10 @@
   }
 
   const DEFAULT_TASKS = [
-    { id: _id(), seller: "Sunrise Bakery", task: "Schedule onboarding call", deadline: _futureDate(1), dsr: "https://example.com/dsr/001", notes: "Urgent — deadline is tomorrow!", done: false },
-    { id: _id(), seller: "Mountain Brew Coffee", task: "Build product catalog", deadline: _futureDate(5), dsr: "https://example.com/dsr/002", notes: "Waiting on menu photos from seller", done: false },
-    { id: _id(), seller: "Green Valley Farms", task: "Conduct final training session", deadline: _futureDate(10), dsr: "https://example.com/dsr/003", notes: "Plenty of time — seller confirmed availability", done: false },
-    { id: _id(), seller: "Coastal Eats", task: "Create menu and upload images", deadline: _futureDate(-3), dsr: "https://example.com/dsr/004", notes: "Completed ahead of schedule", done: true },
+    { id: _id(), seller: "Sunrise Bakery", task: "Schedule onboarding call", deadline: _futureDate(1), time: "09:00", dsr: "https://example.com/dsr/001", notes: "Urgent — deadline is tomorrow!", done: false },
+    { id: _id(), seller: "Mountain Brew Coffee", task: "Build product catalog", deadline: _futureDate(5), time: "", dsr: "https://example.com/dsr/002", notes: "Waiting on menu photos from seller", done: false },
+    { id: _id(), seller: "Green Valley Farms", task: "Conduct final training session", deadline: _futureDate(10), time: "14:30", dsr: "https://example.com/dsr/003", notes: "Plenty of time — seller confirmed availability", done: false },
+    { id: _id(), seller: "Coastal Eats", task: "Create menu and upload images", deadline: _futureDate(-3), time: "", dsr: "https://example.com/dsr/004", notes: "Completed ahead of schedule", done: true },
   ];
 
   function _id() { return Math.random().toString(36).substr(2, 9); }
@@ -558,6 +567,30 @@
 
     const active = tasks.filter(t => !t.done);
     const done = tasks.filter(t => t.done);
+
+    // Sort by date (earliest first), then by time (tasks with time before those without)
+    function sortByDateTime(a, b) {
+      // No deadline sorts last
+      if (!a.deadline && !b.deadline) return 0;
+      if (!a.deadline) return 1;
+      if (!b.deadline) return -1;
+
+      // Compare dates
+      if (a.deadline < b.deadline) return -1;
+      if (a.deadline > b.deadline) return 1;
+
+      // Same date: tasks WITH time come before tasks WITHOUT time
+      const aTime = a.time || '';
+      const bTime = b.time || '';
+      if (aTime && !bTime) return -1;
+      if (!aTime && bTime) return 1;
+      if (aTime && bTime) return aTime.localeCompare(bTime);
+
+      return 0;
+    }
+
+    active.sort(sortByDateTime);
+    done.sort(sortByDateTime);
 
     active.forEach(t => activeBody.appendChild(buildRow(t)));
     done.forEach(t => doneBody.appendChild(buildRow(t)));
@@ -687,6 +720,41 @@
     tdDeadline.appendChild(pillWrap);
     tr.appendChild(tdDeadline);
 
+    // Time (optional)
+    const tdTime = document.createElement('td');
+    const timeInput = document.createElement('input');
+    timeInput.type = 'time';
+    timeInput.className = 'editable';
+    timeInput.value = t.time || '';
+    timeInput.addEventListener('change', () => {
+      t.time = timeInput.value;
+      saveTasks();
+      render();
+      requestAnimationFrame(autoResizeAll);
+    });
+    if (t.time) {
+      const timePill = document.createElement('span');
+      timePill.className = 'deadline-pill';
+      timePill.textContent = formatTime(t.time);
+      timePill.style.cursor = 'pointer';
+      timePill.addEventListener('click', () => {
+        timePill.style.display = 'none';
+        timeInput.style.display = '';
+        timeInput.focus();
+      });
+      timeInput.style.display = 'none';
+      timeInput.addEventListener('blur', () => {
+        if (t.time) {
+          timePill.textContent = formatTime(t.time);
+          timePill.style.display = '';
+          timeInput.style.display = 'none';
+        }
+      });
+      tdTime.appendChild(timePill);
+    }
+    tdTime.appendChild(timeInput);
+    tr.appendChild(tdTime);
+
     // DSR/DSA
     const tdDsr = document.createElement('td');
     if (t.dsr) {
@@ -730,6 +798,7 @@
         seller: t.seller,
         task: t.task,
         deadline: t.deadline,
+        time: t.time || '',
         dsr: t.dsr,
         notes: t.notes,
         done: false
@@ -789,12 +858,22 @@
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  function formatTime(str) {
+    if (!str) return '';
+    const [h, m] = str.split(':');
+    const hour = parseInt(h);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const h12 = hour % 12 || 12;
+    return h12 + ':' + m + ' ' + ampm;
+  }
+
   function addTask() {
     tasks.unshift({
       id: _id(),
       seller: '',
       task: '',
       deadline: '',
+      time: '',
       dsr: '',
       notes: '',
       done: false
