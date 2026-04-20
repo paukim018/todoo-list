@@ -78,7 +78,7 @@
   }
 
   .container {
-    max-width: 1100px;
+    max-width: 1300px;
     margin: 0 auto;
   }
 
@@ -326,6 +326,110 @@
     color: var(--text-muted);
   }
 
+  /* Task type dropdown */
+  select.editable {
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    width: 100%;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: all 0.15s;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%238a8279' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 24px;
+  }
+
+  select.editable:hover { background-color: rgba(0,0,0,0.03); }
+  select.editable:focus { background-color: rgba(0,0,0,0.02); box-shadow: 0 0 0 2px var(--accent-glow); }
+
+  /* Validation warning */
+  .task-validation {
+    color: var(--red);
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin-top: 2px;
+    display: none;
+  }
+
+  .task-validation.show { display: block; }
+
+  /* Subtask indicator */
+  .subtask-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    background: var(--accent-glow);
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  /* Nested subtask rows */
+  tr.subtask-row {
+    background: var(--bg) !important;
+    box-shadow: none !important;
+  }
+
+  tr.subtask-row:hover {
+    background: var(--surface-hover) !important;
+  }
+
+  tr.subtask-row td {
+    font-size: 0.82rem;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  tr.subtask-row td:first-child {
+    border-left-color: transparent !important;
+  }
+
+  /* Indent wrapper — shifts subtask content to the right */
+  tr.subtask-row td.subtask-indent {
+    position: relative;
+    padding-left: 36px;
+  }
+
+  tr.subtask-row td.subtask-indent::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: -6px;
+    bottom: 50%;
+    width: 1px;
+    background: var(--border);
+  }
+
+  tr.subtask-row td.subtask-indent::after {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    width: 14px;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Nesting connector */
+  .nest-connector {
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    margin-right: 4px;
+  }
+
   /* Drag handle */
   .drag-handle {
     cursor: grab;
@@ -457,7 +561,8 @@
         <th style="width:32px"></th>
         <th></th>
         <th>Seller Name</th>
-        <th>Task</th>
+        <th>Task Type</th>
+        <th>Task Detail</th>
         <th>Deadline</th>
         <th>Time</th>
         <th>DSR / DSA</th>
@@ -484,7 +589,8 @@
           <th style="width:32px"></th>
           <th></th>
           <th>Seller Name</th>
-          <th>Task</th>
+          <th>Task Type</th>
+          <th>Task Detail</th>
           <th>Deadline</th>
           <th>Time</th>
           <th>DSR / DSA</th>
@@ -513,12 +619,44 @@
     return d.toISOString().split('T')[0];
   }
 
-  const DEFAULT_TASKS = [
-    { id: _id(), seller: "Sunrise Bakery", task: "Schedule onboarding call", deadline: _futureDate(1), time: "09:00", dsr: "https://example.com/dsr/001", notes: "Urgent — deadline is tomorrow!", done: false },
-    { id: _id(), seller: "Mountain Brew Coffee", task: "Build product catalog", deadline: _futureDate(5), time: "", dsr: "https://example.com/dsr/002", notes: "Waiting on menu photos from seller", done: false },
-    { id: _id(), seller: "Green Valley Farms", task: "Conduct final training session", deadline: _futureDate(10), time: "14:30", dsr: "https://example.com/dsr/003", notes: "Plenty of time — seller confirmed availability", done: false },
-    { id: _id(), seller: "Coastal Eats", task: "Create menu and upload images", deadline: _futureDate(-3), time: "", dsr: "https://example.com/dsr/004", notes: "Completed ahead of schedule", done: true },
+  const TASK_TYPE_OPTIONS = [
+    "Have KOC",
+    "Have Training 1",
+    "Have Training 2",
+    "Have Training 3",
+    "Have Training 4",
+    "Have QA",
+    "Have Optimization Call",
+    "Have Final Q&A",
+    "Menu Build Submission",
+    "Floorplan Build Submission",
+    "Build Loyalty Program Submission",
+    "Setup Payroll Submission"
   ];
+
+  // These task types auto-generate a "Send Recap" subtask
+  const RECAP_TASK_TYPES = [
+    "Have KOC",
+    "Have Training 1",
+    "Have Training 2",
+    "Have Training 3",
+    "Have Training 4",
+    "Have QA",
+    "Have Optimization Call"
+  ];
+
+  const DEFAULT_TASKS = (function() {
+    const sunriseId = _id();
+    const valleyId = _id();
+    return [
+      { id: sunriseId, seller: "Sunrise Bakery", taskType: "Have KOC", task: "", deadline: _futureDate(1), time: "09:00", dsr: "https://example.com/dsr/001", notes: "Urgent — deadline is tomorrow!", done: false, parentId: "" },
+      { id: _id(), seller: "Sunrise Bakery", taskType: "", task: "Send Recap", deadline: _futureDate(1), time: "", dsr: "", notes: "Auto-created recap for Have KOC", done: false, parentId: sunriseId },
+      { id: _id(), seller: "Mountain Brew Coffee", taskType: "", task: "Custom task — waiting on menu photos", deadline: _futureDate(5), time: "", dsr: "https://example.com/dsr/002", notes: "Waiting on menu photos from seller", done: false, parentId: "" },
+      { id: valleyId, seller: "Green Valley Farms", taskType: "Have Training 1", task: "Initial onboarding session", deadline: _futureDate(10), time: "14:30", dsr: "https://example.com/dsr/003", notes: "Plenty of time — seller confirmed availability", done: false, parentId: "" },
+      { id: _id(), seller: "Green Valley Farms", taskType: "", task: "Send Recap", deadline: _futureDate(10), time: "", dsr: "", notes: "Auto-created recap for Have Training 1", done: false, parentId: valleyId },
+      { id: _id(), seller: "Coastal Eats", taskType: "Menu Build Submission", task: "", deadline: _futureDate(-3), time: "", dsr: "https://example.com/dsr/004", notes: "Completed ahead of schedule", done: true, parentId: "" },
+    ];
+  })();
 
   function _id() { return Math.random().toString(36).substr(2, 9); }
 
@@ -565,62 +703,112 @@
     activeBody.innerHTML = '';
     doneBody.innerHTML = '';
 
-    const active = tasks.filter(t => !t.done);
-    const done = tasks.filter(t => t.done);
+    // Separate parents and subtasks
+    const parentTasks = tasks.filter(t => !t.parentId);
+    const subtaskMap = {};
+    tasks.filter(t => t.parentId).forEach(t => {
+      if (!subtaskMap[t.parentId]) subtaskMap[t.parentId] = [];
+      subtaskMap[t.parentId].push(t);
+    });
 
-    // Sort by date (earliest first), then by time (tasks with time before those without)
+    // Sort parents by date/time
     function sortByDateTime(a, b) {
-      // No deadline sorts last
       if (!a.deadline && !b.deadline) return 0;
       if (!a.deadline) return 1;
       if (!b.deadline) return -1;
-
-      // Compare dates
       if (a.deadline < b.deadline) return -1;
       if (a.deadline > b.deadline) return 1;
-
-      // Same date: tasks WITH time come before tasks WITHOUT time
       const aTime = a.time || '';
       const bTime = b.time || '';
       if (aTime && !bTime) return -1;
       if (!aTime && bTime) return 1;
       if (aTime && bTime) return aTime.localeCompare(bTime);
-
       return 0;
     }
 
-    active.sort(sortByDateTime);
-    done.sort(sortByDateTime);
+    const activeParents = parentTasks.filter(t => !t.done);
+    const doneParents = parentTasks.filter(t => t.done);
+    activeParents.sort(sortByDateTime);
+    doneParents.sort(sortByDateTime);
 
-    active.forEach(t => activeBody.appendChild(buildRow(t)));
-    done.forEach(t => doneBody.appendChild(buildRow(t)));
+    let activeCount = 0;
+    let doneCount = 0;
 
-    document.getElementById('active-count').textContent = active.length;
-    document.getElementById('done-count').textContent = done.length;
-    document.getElementById('active-empty').style.display = active.length === 0 ? '' : 'none';
-    document.getElementById('active-table').style.display = active.length === 0 ? 'none' : '';
-    document.getElementById('done-empty').style.display = done.length === 0 ? '' : 'none';
-    document.getElementById('done-table').style.display = done.length === 0 ? 'none' : '';
+    // Render active parents with their subtasks nested below
+    activeParents.forEach(t => {
+      activeBody.appendChild(buildRow(t));
+      activeCount++;
+      const subs = subtaskMap[t.id] || [];
+      subs.forEach(sub => {
+        if (!sub.done) {
+          activeBody.appendChild(buildRow(sub));
+          activeCount++;
+        }
+      });
+    });
+
+    // Also render orphan subtasks that are active (parent might be done but subtask isn't)
+    tasks.filter(t => t.parentId && !t.done).forEach(sub => {
+      const parent = tasks.find(p => p.id === sub.parentId);
+      if (parent && parent.done) {
+        activeBody.appendChild(buildRow(sub));
+        activeCount++;
+      }
+    });
+
+    // Render done parents with their done subtasks
+    doneParents.forEach(t => {
+      doneBody.appendChild(buildRow(t));
+      doneCount++;
+      const subs = subtaskMap[t.id] || [];
+      subs.forEach(sub => {
+        if (sub.done) {
+          doneBody.appendChild(buildRow(sub));
+          doneCount++;
+        }
+      });
+    });
+
+    // Also render done subtasks whose parents are still active
+    tasks.filter(t => t.parentId && t.done).forEach(sub => {
+      const parent = tasks.find(p => p.id === sub.parentId);
+      if (parent && !parent.done) {
+        doneBody.appendChild(buildRow(sub));
+        doneCount++;
+      }
+    });
+
+    document.getElementById('active-count').textContent = activeCount;
+    document.getElementById('done-count').textContent = doneCount;
+    document.getElementById('active-empty').style.display = activeCount === 0 ? '' : 'none';
+    document.getElementById('active-table').style.display = activeCount === 0 ? 'none' : '';
+    document.getElementById('done-empty').style.display = doneCount === 0 ? '' : 'none';
+    document.getElementById('done-table').style.display = doneCount === 0 ? 'none' : '';
   }
 
   function buildRow(t) {
     const tr = document.createElement('tr');
     tr.dataset.id = t.id;
-    tr.draggable = true;
     const urgency = t.done ? '' : getUrgency(t.deadline);
     if (urgency) tr.classList.add('urgency-' + urgency);
     if (t.done) tr.classList.add('task-done');
+    if (t.parentId) tr.classList.add('subtask-row');
 
     // Drag handle
     const tdDrag = document.createElement('td');
     tdDrag.style.width = '32px';
     tdDrag.style.textAlign = 'center';
     tdDrag.style.padding = '0 4px';
-    const handle = document.createElement('span');
-    handle.className = 'drag-handle';
-    handle.textContent = '⠿';
-    handle.title = 'Drag to reorder';
-    tdDrag.appendChild(handle);
+    if (!t.parentId) {
+      const handle = document.createElement('span');
+      handle.className = 'drag-handle';
+      handle.textContent = '⠿';
+      handle.title = 'Drag to reorder';
+      tdDrag.appendChild(handle);
+      tr.draggable = true;
+    } else {
+      tr.draggable = false;
+    }
     tr.appendChild(tdDrag);
 
     // Drag events
@@ -680,10 +868,94 @@
     tr.appendChild(tdCheck);
 
     // Seller
-    tr.appendChild(makeEditableCell(t, 'seller', 'input'));
+    const sellerCell = makeEditableCell(t, 'seller', 'input');
+    if (t.parentId) sellerCell.classList.add('subtask-indent');
+    tr.appendChild(sellerCell);
 
-    // Task
-    tr.appendChild(makeEditableCell(t, 'task', 'textarea'));
+    // Task Type (dropdown)
+    const tdTaskType = document.createElement('td');
+    const selectEl = document.createElement('select');
+    selectEl.className = 'editable';
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.textContent = '— Select —';
+    selectEl.appendChild(emptyOpt);
+    TASK_TYPE_OPTIONS.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt;
+      o.textContent = opt;
+      if (t.taskType === opt) o.selected = true;
+      selectEl.appendChild(o);
+    });
+    selectEl.addEventListener('change', () => {
+      const oldType = t.taskType;
+      t.taskType = selectEl.value;
+      updateValidation(t, validationMsg);
+      saveTasks();
+
+      // Auto-create subtask "Send Recap" if selecting a recap-eligible type
+      if (t.taskType && RECAP_TASK_TYPES.includes(t.taskType) && !RECAP_TASK_TYPES.includes(oldType)) {
+        // Check if a recap subtask already exists for this parent
+        const hasRecap = tasks.some(x => x.parentId === t.id);
+        if (!hasRecap) {
+          const idx = tasks.findIndex(x => x.id === t.id);
+          const recapTask = {
+            id: _id(),
+            seller: t.seller,
+            taskType: '',
+            task: 'Send Recap',
+            deadline: t.deadline,
+            time: '',
+            dsr: '',
+            notes: 'Auto-created recap for ' + t.taskType,
+            done: false,
+            parentId: t.id
+          };
+          tasks.splice(idx + 1, 0, recapTask);
+        }
+      }
+
+      saveTasks();
+      render();
+      requestAnimationFrame(autoResizeAll);
+    });
+    tdTaskType.appendChild(selectEl);
+
+    // Validation message (spans both task columns visually via this cell)
+    const validationMsg = document.createElement('div');
+    validationMsg.className = 'task-validation';
+    validationMsg.textContent = 'You need to fill at least one of these';
+    updateValidation(t, validationMsg);
+    tdTaskType.appendChild(validationMsg);
+
+    tr.appendChild(tdTaskType);
+
+    // Task Detail (open text)
+    const tdTaskDetail = document.createElement('td');
+    if (t.parentId) {
+      const connector = document.createElement('span');
+      connector.className = 'nest-connector';
+      connector.textContent = '↳';
+      tdTaskDetail.appendChild(connector);
+      const badge = document.createElement('span');
+      badge.className = 'subtask-badge';
+      badge.textContent = 'subtask';
+      tdTaskDetail.appendChild(badge);
+    }
+    const taskTextEl = document.createElement('textarea');
+    taskTextEl.className = 'editable';
+    taskTextEl.rows = 1;
+    taskTextEl.value = t.task || '';
+    taskTextEl.placeholder = 'Details…';
+    taskTextEl.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = this.scrollHeight + 'px';
+      t.task = this.value;
+      updateValidation(t, validationMsg);
+      saveTasks();
+    });
+    tdTaskDetail.appendChild(taskTextEl);
+    tr.appendChild(tdTaskDetail);
 
     // Deadline
     const tdDeadline = document.createElement('td');
@@ -796,12 +1068,14 @@
       const clone = {
         id: _id(),
         seller: t.seller,
+        taskType: t.taskType || '',
         task: t.task,
         deadline: t.deadline,
         time: t.time || '',
         dsr: t.dsr,
         notes: t.notes,
-        done: false
+        done: false,
+        parentId: ''
       };
       tasks.splice(idx + 1, 0, clone);
       saveTasks();
@@ -815,8 +1089,10 @@
     delBtn.innerHTML = '✕';
     delBtn.title = 'Delete task';
     delBtn.addEventListener('click', () => {
-      if (confirm('Delete this task?')) {
-        tasks = tasks.filter(x => x.id !== t.id);
+      const hasChildren = tasks.some(x => x.parentId === t.id);
+      const msg = hasChildren ? 'Delete this task and its subtasks?' : 'Delete this task?';
+      if (confirm(msg)) {
+        tasks = tasks.filter(x => x.id !== t.id && x.parentId !== t.id);
         saveTasks();
         render();
       }
@@ -852,6 +1128,16 @@
     return td;
   }
 
+  function updateValidation(task, msgEl) {
+    const hasType = task.taskType && task.taskType.length > 0;
+    const hasDetail = task.task && task.task.trim().length > 0;
+    if (!hasType && !hasDetail) {
+      msgEl.classList.add('show');
+    } else {
+      msgEl.classList.remove('show');
+    }
+  }
+
   function formatDate(str) {
     if (!str) return 'TBD';
     const d = new Date(str + 'T00:00:00');
@@ -871,12 +1157,14 @@
     tasks.unshift({
       id: _id(),
       seller: '',
+      taskType: '',
       task: '',
       deadline: '',
       time: '',
       dsr: '',
       notes: '',
-      done: false
+      done: false,
+      parentId: ''
     });
     saveTasks();
     render();
