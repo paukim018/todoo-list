@@ -457,6 +457,38 @@
     box-shadow: 0 3px 0 0 var(--accent) inset;
   }
 
+  /* Ready button */
+  .ready-btn {
+    background: var(--green-bg);
+    border: 1px solid var(--green-border);
+    color: var(--green);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 5px;
+    transition: all 0.15s;
+    white-space: nowrap;
+    margin-right: 4px;
+  }
+
+  .ready-btn:hover {
+    background: var(--green);
+    color: #ffffff;
+    border-color: var(--green);
+  }
+
+  /* Unready row pulse border */
+  tr.task-unready {
+    outline: 2px dashed var(--accent);
+    outline-offset: -2px;
+  }
+
+  tr.task-unready td:first-child {
+    border-left: 3px dashed var(--accent) !important;
+  }
+
   /* Clone btn */
   .clone-btn {
     background: none;
@@ -649,12 +681,12 @@
     const sunriseId = _id();
     const valleyId = _id();
     return [
-      { id: sunriseId, seller: "Sunrise Bakery", taskType: "Have KOC", task: "", deadline: _futureDate(1), time: "09:00", dsr: "https://example.com/dsr/001", notes: "Urgent — deadline is tomorrow!", done: false, parentId: "" },
-      { id: _id(), seller: "Sunrise Bakery", taskType: "", task: "Send Recap", deadline: _futureDate(1), time: "", dsr: "", notes: "Auto-created recap for Have KOC", done: false, parentId: sunriseId },
-      { id: _id(), seller: "Mountain Brew Coffee", taskType: "", task: "Custom task — waiting on menu photos", deadline: _futureDate(5), time: "", dsr: "https://example.com/dsr/002", notes: "Waiting on menu photos from seller", done: false, parentId: "" },
-      { id: valleyId, seller: "Green Valley Farms", taskType: "Have Training 1", task: "Initial onboarding session", deadline: _futureDate(10), time: "14:30", dsr: "https://example.com/dsr/003", notes: "Plenty of time — seller confirmed availability", done: false, parentId: "" },
-      { id: _id(), seller: "Green Valley Farms", taskType: "", task: "Send Recap", deadline: _futureDate(10), time: "", dsr: "", notes: "Auto-created recap for Have Training 1", done: false, parentId: valleyId },
-      { id: _id(), seller: "Coastal Eats", taskType: "Menu Build Submission", task: "", deadline: _futureDate(-3), time: "", dsr: "https://example.com/dsr/004", notes: "Completed ahead of schedule", done: true, parentId: "" },
+      { id: sunriseId, seller: "Sunrise Bakery", taskType: "Have KOC", task: "", deadline: _futureDate(1), time: "09:00", dsr: "https://example.com/dsr/001", notes: "Urgent — deadline is tomorrow!", done: false, parentId: "", ready: true },
+      { id: _id(), seller: "Sunrise Bakery", taskType: "", task: "Send Recap", deadline: _futureDate(1), time: "", dsr: "", notes: "Auto-created recap for Have KOC", done: false, parentId: sunriseId, ready: true },
+      { id: _id(), seller: "Mountain Brew Coffee", taskType: "", task: "Custom task — waiting on menu photos", deadline: _futureDate(5), time: "", dsr: "https://example.com/dsr/002", notes: "Waiting on menu photos from seller", done: false, parentId: "", ready: true },
+      { id: valleyId, seller: "Green Valley Farms", taskType: "Have Training 1", task: "Initial onboarding session", deadline: _futureDate(10), time: "14:30", dsr: "https://example.com/dsr/003", notes: "Plenty of time — seller confirmed availability", done: false, parentId: "", ready: true },
+      { id: _id(), seller: "Green Valley Farms", taskType: "", task: "Send Recap", deadline: _futureDate(10), time: "", dsr: "", notes: "Auto-created recap for Have Training 1", done: false, parentId: valleyId, ready: true },
+      { id: _id(), seller: "Coastal Eats", taskType: "Menu Build Submission", task: "", deadline: _futureDate(-3), time: "", dsr: "https://example.com/dsr/004", notes: "Completed ahead of schedule", done: true, parentId: "", ready: true },
     ];
   })();
 
@@ -703,6 +735,9 @@
     activeBody.innerHTML = '';
     doneBody.innerHTML = '';
 
+    // Treat tasks without a 'ready' field as ready (backwards compat)
+    tasks.forEach(t => { if (t.ready === undefined) t.ready = true; });
+
     // Separate parents and subtasks
     const parentTasks = tasks.filter(t => !t.parentId);
     const subtaskMap = {};
@@ -711,7 +746,7 @@
       subtaskMap[t.parentId].push(t);
     });
 
-    // Sort parents by date/time
+    // Sort helper
     function sortByDateTime(a, b) {
       if (!a.deadline && !b.deadline) return 0;
       if (!a.deadline) return 1;
@@ -726,16 +761,19 @@
       return 0;
     }
 
-    const activeParents = parentTasks.filter(t => !t.done);
+    // Active: unready parents first (unsorted, insertion order), then ready parents (sorted)
+    const activeUnready = parentTasks.filter(t => !t.done && !t.ready);
+    const activeReady = parentTasks.filter(t => !t.done && t.ready);
+    activeReady.sort(sortByDateTime);
+
     const doneParents = parentTasks.filter(t => t.done);
-    activeParents.sort(sortByDateTime);
     doneParents.sort(sortByDateTime);
 
     let activeCount = 0;
     let doneCount = 0;
 
-    // Render active parents with their subtasks nested below
-    activeParents.forEach(t => {
+    // Helper to render a parent and its active subtasks
+    function renderActiveParent(t) {
       activeBody.appendChild(buildRow(t));
       activeCount++;
       const subs = subtaskMap[t.id] || [];
@@ -745,9 +783,15 @@
           activeCount++;
         }
       });
-    });
+    }
 
-    // Also render orphan subtasks that are active (parent might be done but subtask isn't)
+    // Render unready parents at top (unsorted)
+    activeUnready.forEach(renderActiveParent);
+
+    // Render ready parents below (sorted)
+    activeReady.forEach(renderActiveParent);
+
+    // Orphan subtasks (parent done, subtask active)
     tasks.filter(t => t.parentId && !t.done).forEach(sub => {
       const parent = tasks.find(p => p.id === sub.parentId);
       if (parent && parent.done) {
@@ -769,7 +813,7 @@
       });
     });
 
-    // Also render done subtasks whose parents are still active
+    // Done subtasks whose parents are still active
     tasks.filter(t => t.parentId && t.done).forEach(sub => {
       const parent = tasks.find(p => p.id === sub.parentId);
       if (parent && !parent.done) {
@@ -793,6 +837,7 @@
     if (urgency) tr.classList.add('urgency-' + urgency);
     if (t.done) tr.classList.add('task-done');
     if (t.parentId) tr.classList.add('subtask-row');
+    if (!t.ready && !t.done && !t.parentId) tr.classList.add('task-unready');
 
     // Drag handle
     const tdDrag = document.createElement('td');
@@ -909,7 +954,8 @@
             dsr: '',
             notes: 'Auto-created recap for ' + t.taskType,
             done: false,
-            parentId: t.id
+            parentId: t.id,
+            ready: t.ready || false
           };
           tasks.splice(idx + 1, 0, recapTask);
         }
@@ -966,7 +1012,8 @@
     dateInput.addEventListener('change', () => {
       t.deadline = dateInput.value;
       saveTasks();
-      render();
+      // Only re-render (re-sort) if task is ready
+      if (t.ready) render();
     });
     // Wrap in pill for display
     const pillWrap = document.createElement('div');
@@ -1001,8 +1048,10 @@
     timeInput.addEventListener('change', () => {
       t.time = timeInput.value;
       saveTasks();
-      render();
-      requestAnimationFrame(autoResizeAll);
+      if (t.ready) {
+        render();
+        requestAnimationFrame(autoResizeAll);
+      }
     });
     if (t.time) {
       const timePill = document.createElement('span');
@@ -1055,9 +1104,26 @@
     // Notes
     tr.appendChild(makeEditableCell(t, 'notes', 'textarea'));
 
-    // Actions (clone + delete)
+    // Actions (ready + clone + delete)
     const tdActions = document.createElement('td');
     tdActions.style.whiteSpace = 'nowrap';
+
+    // Ready button (only for unready parent tasks)
+    if (!t.ready && !t.done && !t.parentId) {
+      const readyBtn = document.createElement('button');
+      readyBtn.className = 'ready-btn';
+      readyBtn.innerHTML = 'Ready ✓';
+      readyBtn.title = 'Mark as ready — task will sort into position';
+      readyBtn.addEventListener('click', () => {
+        t.ready = true;
+        // Also mark subtasks as ready
+        tasks.filter(x => x.parentId === t.id).forEach(sub => sub.ready = true);
+        saveTasks();
+        render();
+        requestAnimationFrame(autoResizeAll);
+      });
+      tdActions.appendChild(readyBtn);
+    }
 
     const cloneBtn = document.createElement('button');
     cloneBtn.className = 'clone-btn';
@@ -1075,7 +1141,8 @@
         dsr: t.dsr,
         notes: t.notes,
         done: false,
-        parentId: ''
+        parentId: '',
+        ready: false
       };
       tasks.splice(idx + 1, 0, clone);
       saveTasks();
@@ -1164,7 +1231,8 @@
       dsr: '',
       notes: '',
       done: false,
-      parentId: ''
+      parentId: '',
+      ready: false
     });
     saveTasks();
     render();
